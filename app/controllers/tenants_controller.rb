@@ -1,9 +1,9 @@
 class TenantsController < ApplicationController
   before_action :set_tenant, only: %i[ show edit update destroy ]
-
+  before_action :authorize_member, only: %i[ show edit update destroy ]
   # GET /tenants or /tenants.json
   def index
-    @tenants = Tenant.all
+    @tenants = current_user.tenants
   end
 
   # GET /tenants/1 or /tenants/1.json
@@ -25,6 +25,7 @@ class TenantsController < ApplicationController
 
     respond_to do |format|
       if @tenant.save
+        @tenant.members.create(user: current_user, roles: { admin: true })
         format.html { redirect_to @tenant, notice: "Tenant was successfully created." }
         format.json { render :show, status: :created, location: @tenant }
       else
@@ -58,12 +59,13 @@ class TenantsController < ApplicationController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
+    def authorize_member
+          redirect_to root_path, alert: "You are not a member" unless @tenant.users.include? current_user
+    end
     def set_tenant
       @tenant = Tenant.find(params.expect(:id))
     end
 
-    # Only allow a list of trusted parameters through.
     def tenant_params
       params.expect(tenant: [ :name ])
     end
